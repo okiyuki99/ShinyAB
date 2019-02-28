@@ -7,6 +7,20 @@ shinyServer(function(input, output, session){
   values$reject_line <- 0
   #values$power_estimate <- 0
   
+  id_notification <- ""
+  
+  # --------------------------
+  # Display Max number of pairs
+  output$max_comparison <- renderUI({
+    HTML("<div style=\"font-style: italic;\">Max number of pairs :<strong>", base::choose(input$number_of_samples, 2), "</strong></div>")
+  })
+  
+  # --------------------------
+  # Display current lift
+  output$current_lift <- renderUI({
+    HTML("<div style=\"font-style: italic;\">Lift from As-Is ratio to To-Be ratio :<strong>", paste0(round(100 * (input$expected_value / input$current_value  - 1),2),"%"), "</strong></div>")
+  })
+  
   # --------------------------
   # Create Data for table and plot
   observeEvent(input$btn_go, {
@@ -15,17 +29,20 @@ shinyServer(function(input, output, session){
     power <- input$power
     current_value <- input$current_value
     expected_value <- input$expected_value
+    alternative <- input$alternative
     
     # calculate sample size
     sample_size_per_group <- ceiling(power.prop.test(n = NULL, 
                                                      p1 = current_value, p2 = expected_value,
-                                                     sig.level = alpha, power = power, alternative = "two.sided")$n)
+                                                     sig.level = alpha, power = power, alternative = alternative)$n)
     required_sample_size <- input$number_of_samples * sample_size_per_group
     sampling_rate <- required_sample_size / input$uu
-    values$work_data <- data.frame(UU = input$uu, alpha, power, 
+    values$work_data <- data.frame(UU = input$uu, alpha, power, test = alternative,
                                    current_value = current_value, 
                                    expected_value = expected_value, 
-                                   sample_size_per_group,　required_sample_size, sampling_rate, 
+                                   sample_size_per_group,
+                                   required_sample_size, 
+                                   sampling_rate, 
                                    stringsAsFactors = F)
     
     # create case label
@@ -82,6 +99,7 @@ shinyServer(function(input, output, session){
     if(nrow(values$data) > 0){
       values$data %>%
         replace(is.na(.), "") %>%
+        mutate(sampling_rate = paste0(round(sampling_rate * 100, 2),"%")) %>%
         mutate_if(is.numeric, function(x){formatC(x,format = "f", big.mark = ",", drop0trailing = T)}) %>%
         mutate(sample_size_per_group = cell_spec(sample_size_per_group, color = "blue")) %>%
         mutate(required_sample_size = cell_spec(required_sample_size, color = "blue")) %>%
@@ -104,13 +122,14 @@ shinyServer(function(input, output, session){
       alpha <- isolate(input$alpha)
       power <- isolate(input$power)
       current_value <- isolate(input$current_value)
+      alternative <- isolate(input$alternative)
       
       lift <- seq(0.01, 0.5, 0.01)
       expected_values <- current_value * (1 + lift)
       sample_size_per_groups <- sapply(expected_values, function(x){
         ceiling(power.prop.test(n = NULL, 
                                 p1 = current_value, p2 = x,
-                                sig.level = alpha, power = power, alternative = "two.sided")$n)})
+                                sig.level = alpha, power = power, alternative = alternative)$n)})
       
       df <- data.frame(lift = lift * 100, sample_size_per_groups, stringsAsFactors = F)
       p <- plot_ly(df, x = ~lift, y = ~sample_size_per_groups) %>% 
@@ -138,4 +157,29 @@ shinyServer(function(input, output, session){
         labs(y = "percent")
     }
   })
+  
+  # --------------------------
+  # Output : Summary of Type 1 and 2 Errors
+  # --------------------------
+  output$kable_error_matrix <- function() {
+    df.error <- tibble(
+      ` ` = c("Decision","Decision","Decision","Decision"),
+      `  ` = c("Do not reject H0","Do not reject H0","Reject H0","Reject H0"),
+      `H0 is True` = c("Correct<br>True Negative<br>", paste0(100*(1 - input$alpha),"%"), "TypeⅠ Error<br>False Positive<br>", paste0(100*input$alpha,"%")),
+      `H1 is True` = c("TypeⅡ Error<br>False Negative<br>", paste0(100*(1 - input$power),"%"), "Correct<br>True Positive<br>", paste0(100*input$power,"%"))
+    )
+    df.error[2, 3] <- cell_spec(df.error[2, 3], "html", color = "#3A5FCD")
+    df.error[4, 3] <- cell_spec(df.error[4, 3], "html", color = "#CD3333")
+    df.error[2, 4] <- cell_spec(df.error[2, 4], "html", color = "#CD3333")
+    df.error[4, 4] <- cell_spec(df.error[4, 4], "html", color = "#3A5FCD")
+    df.error %>%
+      mutate(` ` = cell_spec(` `, "html", angle = -90)) %>%
+      knitr::kable(align = "c", escape = F) %>% 
+      kable_styling(c("striped", "bordered"), full_width = T) %>%
+      column_spec(1, bold = T, width = "1cm") %>%
+      column_spec(2, bold = T) %>%
+      collapse_rows(columns = 1:2, valign = "middle") %>%
+      add_header_above(c("　" = 2, "Real" = 2), bold = T)
+  }
+  
 })
