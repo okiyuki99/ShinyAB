@@ -5,20 +5,33 @@ shinyServer(function(input, output, session){
   values$work_data <- data.frame(stringsAsFactors = F)
   values$pmf_data <- data.frame(stringsAsFactors = F)
   values$reject_line <- 0
+  values$selected_columns <- c()
   #values$power_estimate <- 0
   
   id_notification <- ""
   
   # --------------------------
   # Display Max number of pairs
-  output$max_comparison <- renderUI({
+  output$ui_max_comparison <- renderUI({
     HTML("<div style=\"font-style: italic;\">Max number of pairs :<strong>", base::choose(input$number_of_samples, 2), "</strong></div>")
   })
   
   # --------------------------
   # Display current lift
-  output$current_lift <- renderUI({
+  output$ui_current_lift <- renderUI({
     HTML("<div style=\"font-style: italic;\">Lift from As-Is ratio to To-Be ratio :<strong>", paste0(round(100 * (input$expected_value / input$current_value  - 1),2),"%"), "</strong></div>")
+  })
+  
+  # --------------------------
+  # Insert unvisible columns
+  output$ui_unvisible_columns <- renderUI({
+    checkboxGroupInput(
+      "unvisible_columns", NULL, 
+      choices = c("UU" = "UU", "alpha" = "alpha", "power" = "power","test" = "test", "current_value" = "current_value",
+                  "expected_value" = "expected_value", "sample_size_per_group" = "sample_size_per_group",
+                  "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"), 
+      selected = c("UU","alpha","power","test","current_value","expected_value","sample_size_per_group","required_sample_size","sampling_rate"),
+      inline = T)
   })
   
   # --------------------------
@@ -104,11 +117,12 @@ shinyServer(function(input, output, session){
         mutate(sample_size_per_group = cell_spec(sample_size_per_group, color = "blue")) %>%
         mutate(required_sample_size = cell_spec(required_sample_size, color = "blue")) %>%
         mutate(sampling_rate = cell_spec(sampling_rate, color = "blue")) %>%
+        select(input$unvisible_columns) %>%
         knitr::kable(align = "r", escape = F) %>% 
         kable_styling(c("striped", "bordered"), full_width = T)
     }  
   }
-  
+
   # --------------------------
   # Output : Samplesize × Lift
   # --------------------------
@@ -136,6 +150,44 @@ shinyServer(function(input, output, session){
         add_trace(showlegend = F, type = "scatter", mode = 'lines+markers') %>%
         layout(title = paste("current value:",current_value, "alpha:",alpha, "power:",power), 
                yaxis = list(title = "sample size per group", exponentformat = "none"), xaxis = list(title = "Lift (%)", dtick = 5))
+      p 
+    }
+  })
+  
+  # --------------------------
+  # Output : Running Lift
+  # --------------------------
+  output$running_lift <- renderPlotly({
+    if(input$btn_go == 0 | !"running_lift_plot" %in% isolate(input$optional_plot)){
+      plot_ly(type="scatter", mode = "markers") %>% 
+        layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
+               yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+      
+    }else{
+      uu <- isolate(input$uu)
+      alpha <- isolate(input$alpha)
+      power <- isolate(input$power)
+      current_value <- isolate(input$current_value)
+      test_period <- isolate(input$test_period)
+      alternative <- isolate(input$alternative)
+      
+      uu_daily <- floor(uu / test_period)
+      
+      lifts <- sapply(1:test_period, function(x){
+        p2 <- power.prop.test(n = x * uu_daily, p1 = current_value, p2 = NULL,
+                              sig.level = alpha, power = power, alternative = alternative)$p2
+        100 * (p2 / current_value - 1.0)
+      })
+      
+      df <- data.frame(lifts, period = 1:test_period, uu = 1:test_period * uu_daily, stringsAsFactors = F)
+      p <- plot_ly(df, x = ~period) %>% 
+        add_trace(y = ~lifts, name = "Lift(%)", showlegend = T, type = "scatter", mode = 'lines+markers') %>%
+        add_trace(y = ~uu, name = "Sample Size", showlegend = T, type = "scatter", mode = 'lines+markers', yaxis = "y2") %>%
+        layout(title = paste("current value:",current_value, "alpha:",alpha, "power:",power), 
+               legend = list(orientation = 'h'),
+               yaxis = list(title = "Lift(%)", exponentformat = "none"), 
+               yaxis2 = list(title = "Sample Size",exponentformat = "none", overlaying = "y", side = "right", automargin = TRUE),
+               xaxis = list(title = "Running Day", dtick = 1))
       p 
     }
   })
@@ -181,5 +233,4 @@ shinyServer(function(input, output, session){
       collapse_rows(columns = 1:2, valign = "middle") %>%
       add_header_above(c("　" = 2, "Real" = 2), bold = T)
   }
-  
 })

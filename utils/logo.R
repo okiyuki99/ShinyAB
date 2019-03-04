@@ -1,5 +1,5 @@
 logo_grey_light <- shinyDashboardLogoDIY(
-  boldText = "ShinyAB"
+  boldText = "ShinyAB Design"
   ,mainText = ""
   ,textSize = 16
   ,badgeText = "0.1.0.9000"
