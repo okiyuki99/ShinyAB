@@ -16,9 +16,52 @@ shinyServer(function(input, output, session){
   })
   
   # --------------------------
-  # Display current lift
-  output$ui_current_lift <- renderUI({
-    HTML("<div style=\"font-style: italic;\">Lift from As-Is ratio to To-Be ratio :<strong>", paste0(round(100 * (input$expected_value / input$current_value  - 1),2),"%"), "</strong></div>")
+  # Dynamic UI by per method 
+  output$ui_test_method_paramter <- renderUI({
+    if(input$test_method == "prop.test"){
+      tagList(
+        fluidRow(
+          column(4, numericInput('current_value', "As Is - Ratio", 0.3, min = 0, max = 1.0, step = 0.01)),
+          column(4, numericInput('expected_value', "To Be - Ratio", 0.4, min = 0, max = 1.0, step = 0.01)),
+          column(4, uiOutput("ui_lift"))
+        ),
+        fluidRow(
+          column(4, radioButtons('alternative', "Choose two or one sided", choices  = c("two.sided","one.sided"), selected = "two.sided", inline = T)),
+          column(8, 
+                 p(
+                   HTML("<b>(Optional) Choose plot</b>"),span(shiny::icon("info-circle"), id = "info_optional_plot"), 
+                   checkboxGroupInput("optional_plot", NULL, 
+                                      choices = c("Sample Size × Lift" = "lift_plot", "Running Lift" = "running_lift_plot", "Reject region and Power" = "rrp", "Probability Mass Function" = "pmf"), 
+                                      selected = c("lift_plot","running_lift_plot","rrp","pmf"), inline = T),
+                   tippy::tippy_this(elementId = "info_optional_plot", tooltip = "You can choose multiple plots for understanding AB Test.", placement = "right")
+                 )    
+          )
+        )
+      )
+    }else if(input$test_method == "t.test"){
+      tagList(
+        fluidRow(
+          column(4, numericInput('current_value', "As Is - Mean", 1)),
+          column(4, numericInput('expected_value', "To Be - Mean", 1.5)),
+          column(4, uiOutput("ui_lift"))
+        ),
+        fluidRow(
+          column(4, numericInput('standard_deviation', "standard deviation", 1)),
+          column(4, radioButtons('test_type', "Choose type", choices  = c("two.sample", "one.sample", "paired"), selected = "two.sample", inline = T)),
+          column(4, radioButtons('alternative', "Choose two or one sided", choices  = c("two.sided","one.sided"), selected = "two.sided", inline = T))
+        )
+      )
+    }
+  })
+  
+  # --------------------------
+  # Display Lift from as_is to to_be
+  output$ui_lift <- renderUI({
+    if(input$test_method == "prop.test"){
+      HTML("<div style=\"font-style: italic;\">Lift from As-Is ratio to To-Be ratio :<strong>", paste0(round(100 * (input$expected_value / input$current_value - 1),2),"%"), "</strong></div>")
+    }else if(input$test_method == "t.test"){
+      HTML("<div style=\"font-style: italic;\">Lift from As-Is mean to To-Be mean :<strong>", paste0(round(100 * (input$expected_value / input$current_value - 1),2),"%"), "</strong></div>")
+    }
   })
   
   # --------------------------
@@ -26,10 +69,10 @@ shinyServer(function(input, output, session){
   output$ui_unvisible_columns <- renderUI({
     checkboxGroupInput(
       "unvisible_columns", NULL, 
-      choices = c("UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power","test" = "test", "as_is" = "as_is",
+      choices = c("UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power","test_method" = "test_method", "as_is" = "as_is",
                   "to_be" = "to_be", "sample_size_per_group" = "sample_size_per_group",
                   "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"), 
-      selected = c("UU","number_of_samples","alpha","power","test","as_is","to_be","sample_size_per_group","required_sample_size","sampling_rate"),
+      selected = c("UU","number_of_samples","alpha","power","test_method","as_is","to_be","sample_size_per_group","required_sample_size","sampling_rate"),
       inline = T
     )
     #selectInput(
@@ -47,6 +90,7 @@ shinyServer(function(input, output, session){
   observeEvent(input$btn_go, {
     # from input
     number_of_samples <- input$number_of_samples
+    test_method <- input$test_method
     alpha <- input$alpha
     power <- input$power
     current_value <- input$current_value
@@ -55,12 +99,21 @@ shinyServer(function(input, output, session){
     unvisible_columns <- input$unvisible_columns
     
     # calculate sample size
-    sample_size_per_group <- ceiling(power.prop.test(n = NULL, 
-                                                     p1 = current_value, p2 = expected_value,
-                                                     sig.level = alpha, power = power, alternative = alternative)$n)
+    if(test_method == "prop.test"){
+      sample_size_per_group <- ceiling(power.prop.test(n = NULL, 
+                                                       p1 = current_value, p2 = expected_value,
+                                                       sig.level = alpha, power = power, alternative = alternative)$n)
+    }else if(test_method == "t.test"){
+      sample_size_per_group <- ceiling(power.t.test(n = NULL, 
+                                                    delta = expected_value - current_value,
+                                                    sd = input$standard_deviation,
+                                                    sig.level = alpha, power = power, type = input$test_type, alternative = alternative)$n)
+    }
     required_sample_size <- number_of_samples * sample_size_per_group
     sampling_rate <- required_sample_size / input$uu
-    values$work_data <- data.frame(UU = input$uu, number_of_samples, alpha, power, test = alternative,
+    
+    # save
+    values$work_data <- data.frame(UU = input$uu, number_of_samples, alpha, power, test_method,
                                    as_is = current_value, 
                                    to_be = expected_value, 
                                    sample_size_per_group,
@@ -81,7 +134,8 @@ shinyServer(function(input, output, session){
     
     if("case" %in% names(values$data)){
       updateCheckboxGroupInput(session, "unvisible_columns", NULL,
-                               choices = c("case" = "case", "UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power","test" = "test", "as_is" = "as_is",
+                               choices = c("case" = "case", "UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power",
+                                           "test_method" = "test_method", "as_is" = "as_is",
                                            "to_be" = "to_be", "sample_size_per_group" = "sample_size_per_group",
                                            "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"),
                                selected = c("case",unvisible_columns), inline = T)
@@ -121,7 +175,8 @@ shinyServer(function(input, output, session){
         if(all(is.na(values$data["case"]))){
           values$data["case"] <- NULL
           updateCheckboxGroupInput(session, "unvisible_columns", NULL,
-                                   choices = c("UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power","test" = "test", "as_is" = "as_is",
+                                   choices = c("UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power",
+                                               "test_method" = "test_method", "as_is" = "as_is",
                                                "to_be" = "to_be", "sample_size_per_group" = "sample_size_per_group",
                                                "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"),
                                    selected = setdiff(input$unvisible_columns, "case"), inline = T)
@@ -155,125 +210,165 @@ shinyServer(function(input, output, session){
   # Output : Samplesize × Lift
   # --------------------------
   output$simulation_plot <- renderPlotly({
-    if(input$btn_go == 0 | !"lift_plot" %in% isolate(input$optional_plot)){
-      plot_ly(type="scatter", mode = "markers") %>% 
-        layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
-               yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
-      
-    }else{
-      alpha <- isolate(input$alpha)
-      power <- isolate(input$power)
-      current_value <- isolate(input$current_value)
-      alternative <- isolate(input$alternative)
-      
-      lift <- seq(0.01, 0.5, 0.01)
-      expected_values <- current_value * (1 + lift)
-      sample_size_per_groups <- sapply(expected_values, function(x){
-        ceiling(power.prop.test(n = NULL, 
-                                p1 = current_value, p2 = x,
-                                sig.level = alpha, power = power, alternative = alternative)$n)})
-      
-      df <- data.frame(lift = lift * 100, sample_size_per_groups, stringsAsFactors = F)
-      p <- plot_ly(df, x = ~lift, y = ~sample_size_per_groups) %>% 
-        add_trace(showlegend = F, type = "scatter", mode = 'lines+markers') %>%
-        layout(title = paste("as is:",current_value, "alpha:",alpha, "power:",power), 
-               yaxis = list(title = "sample size per group", exponentformat = "none"), xaxis = list(title = "Lift (%)", dtick = 5))
-      p 
+    p <- plot_ly(type="scatter", mode = "markers") %>% 
+      layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
+             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+    p$elementId <- NULL
+    
+    if(input$test_method == "t.test" | input$btn_go == 0 | !"lift_plot" %in% isolate(input$optional_plot)){
+      return(p) 
     }
+    
+    if(nrow(values$work_data) > 0){
+      if(values$work_data[["test_method"]] != "prop.test"){
+        return(p)
+      }
+    }
+    
+    alpha <- isolate(input$alpha)
+    power <- isolate(input$power)
+    current_value <- isolate(input$current_value)
+    alternative <- isolate(input$alternative)
+    
+    lift <- seq(0.01, 0.5, 0.01)
+    expected_values <- current_value * (1 + lift)
+    sample_size_per_groups <- sapply(expected_values, function(x){
+      ceiling(power.prop.test(n = NULL, 
+                              p1 = current_value, p2 = x,
+                              sig.level = alpha, power = power, alternative = alternative)$n)})
+    
+    df <- data.frame(lift = lift * 100, sample_size_per_groups, stringsAsFactors = F)
+    p <- plot_ly(df, x = ~lift, y = ~sample_size_per_groups) %>% 
+      add_trace(showlegend = F, type = "scatter", mode = 'lines+markers') %>%
+      layout(title = paste("as is:",current_value, "alpha:",alpha, "power:",power), 
+             yaxis = list(title = "sample size per group", exponentformat = "none"), xaxis = list(title = "Lift (%)", dtick = 5))
+    p$elementId <- NULL
+    p
   })
   
   # --------------------------
   # Output : Running Lift
   # --------------------------
   output$running_lift <- renderPlotly({
-    if(input$btn_go == 0 | !"running_lift_plot" %in% isolate(input$optional_plot)){
-      plot_ly(type="scatter", mode = "markers") %>% 
-        layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
-               yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
-      
-    }else{
-      uu <- isolate(input$uu)
-      alpha <- isolate(input$alpha)
-      power <- isolate(input$power)
-      current_value <- isolate(input$current_value)
-      test_period <- isolate(input$test_period)
-      alternative <- isolate(input$alternative)
-      
-      uu_daily <- floor(uu / test_period)
-      
-      lifts <- sapply(1:test_period, function(x){
-        p2 <- power.prop.test(n = x * uu_daily, p1 = current_value, p2 = NULL,
-                              sig.level = alpha, power = power, alternative = alternative)$p2
-        100 * (p2 / current_value - 1.0)
-      })
-      
-      df <- data.frame(lifts, period = 1:test_period, uu = 1:test_period * uu_daily, stringsAsFactors = F)
-      p <- plot_ly(df, x = ~period) %>% 
-        add_trace(y = ~lifts, name = "Lift(%)", showlegend = T, type = "scatter", mode = 'lines+markers') %>%
-        add_trace(y = ~uu, name = "Sample Size", showlegend = T, type = "scatter", mode = 'lines+markers', yaxis = "y2") %>%
-        layout(title = paste("as is:",current_value, "alpha:",alpha, "power:",power), 
-               legend = list(orientation = 'h'),
-               yaxis = list(title = "Lift(%)", exponentformat = "none"), 
-               yaxis2 = list(title = "Sample Size",exponentformat = "none", overlaying = "y", side = "right", automargin = TRUE),
-               xaxis = list(title = "Running Day", dtick = 1))
-      p 
+    p <- plot_ly(type="scatter", mode = "markers") %>% 
+      layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
+             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+    p$elementId <- NULL
+    
+    if(input$test_method == "t.test" | input$btn_go == 0 | !"running_lift_plot" %in% isolate(input$optional_plot)){
+      return(p) 
     }
+    
+    if(nrow(values$work_data) > 0){
+      if(values$work_data[["test_method"]] != "prop.test"){
+        return(p)
+      }
+    }
+    
+    uu <- isolate(input$uu)
+    alpha <- isolate(input$alpha)
+    power <- isolate(input$power)
+    current_value <- isolate(input$current_value)
+    test_period <- isolate(input$test_period)
+    alternative <- isolate(input$alternative)
+    
+    uu_daily <- floor(uu / test_period)
+    
+    lifts <- sapply(1:test_period, function(x){
+      p2 <- power.prop.test(n = x * uu_daily, p1 = current_value, p2 = NULL,
+                            sig.level = alpha, power = power, alternative = alternative)$p2
+      100 * (p2 / current_value - 1.0)
+    })
+    
+    df <- data.frame(lifts, period = 1:test_period, uu = 1:test_period * uu_daily, stringsAsFactors = F)
+    p <- plot_ly(df, x = ~period) %>% 
+      add_trace(y = ~lifts, name = "Lift(%)", showlegend = T, type = "scatter", mode = 'lines+markers') %>%
+      add_trace(y = ~uu, name = "Sample Size", showlegend = T, type = "scatter", mode = 'lines+markers', yaxis = "y2") %>%
+      layout(title = paste("as is:",current_value, "alpha:",alpha, "power:",power), 
+             legend = list(orientation = 'h'),
+             yaxis = list(title = "Lift(%)", exponentformat = "none"), 
+             yaxis2 = list(title = "Sample Size",exponentformat = "none", overlaying = "y", side = "right", automargin = TRUE),
+             xaxis = list(title = "Running Day", dtick = 1))
+    p$elementId <- NULL
+    p 
   })
   
   # --------------------------
   # Output : Reject region and Power Plot
   # --------------------------
   output$rrp_plot <- renderPlotly({
-    if(input$btn_go == 0 | !"rrp" %in% isolate(input$optional_plot)){
-      plot_ly(type="scatter", mode = "markers") %>% 
-        layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
-               yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
-      
-    }else{
-      alpha <- isolate(input$alpha)
-      power <- isolate(input$power)
-      
-      df <- data_power_prop_test(values$work_data$sample_size_per_group, 
-                                 values$work_data$sample_size_per_group, 
-                                 values$work_data$as_is, 
-                                 values$work_data$to_be)
-      g <- ggplot(df, aes(x = x) ) +
-        geom_line(aes(y = y1, colour = 'H0 is True'), size = 0.5) +
-        geom_line(aes(y = y2, colour = 'H1 is True'), size = 0.5) +
-        geom_point(aes(y = y1, colour = 'H0 is True'), shape = 21, size = 1) +
-        geom_point(aes(y = y2, colour = 'H1 is True'), shape = 21, size = 1) +
-        geom_area(aes(y = y1, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = "#333333", na.rm = T) +
-        geom_area(aes(y = y2, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = '#00CD00', alpha = 0.3, na.rm = T) +
-        annotate("text", x = qnorm(alpha / 2, lower.tail = F) + 0.5, y = 0.2, label=paste0("Power\r\n",round(100 * power,1),"%")) +
-        labs(x = '', y = '', 
-             title = sprintf('as_is: %s to_be : %s sample_size = %d', 
-                             values$work_data$as_is, values$work_data$to_be, values$work_data$sample_size_per_group)) +
-        scale_x_continuous(breaks = seq(-4,6,1)) +
-        scale_colour_manual(breaks = c("H0 is True", "H1 is True"), values = c("#104E8B", "#EE2C2C")) +
-        theme_bw()
-      ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
+    p <- plot_ly(type="scatter", mode = "markers") %>% 
+      layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
+             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+    p$elementId <- NULL
+    
+    if(input$test_method == "t.test" | input$btn_go == 0 | !"rrp" %in% isolate(input$optional_plot)){
+      return(p)
     }
+    
+    if(nrow(values$work_data) > 0){
+      if(values$work_data[["test_method"]] != "prop.test"){
+        return(p)
+      }
+    }
+    
+    alpha <- isolate(input$alpha)
+    power <- isolate(input$power)
+    
+    df <- data_power_prop_test(values$work_data$sample_size_per_group, 
+                               values$work_data$sample_size_per_group, 
+                               values$work_data$as_is, 
+                               values$work_data$to_be)
+    
+    g <- ggplot(df, aes(x = x) ) +
+      geom_line(aes(y = y1, colour = 'H0 is True'), size = 0.5) +
+      geom_line(aes(y = y2, colour = 'H1 is True'), size = 0.5) +
+      geom_point(aes(y = y1, colour = 'H0 is True'), shape = 21, size = 1) +
+      geom_point(aes(y = y2, colour = 'H1 is True'), shape = 21, size = 1) +
+      geom_area(aes(y = y1, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = "#333333", na.rm = T) +
+      geom_area(aes(y = y2, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = '#00CD00', alpha = 0.3, na.rm = T) +
+      annotate("text", x = qnorm(alpha / 2, lower.tail = F) + 0.5, y = 0.2, label=paste0("Power\r\n",round(100 * power,1),"%")) +
+      labs(x = '', y = '', 
+           title = sprintf('as_is: %s to_be : %s sample_size = %d', 
+                           values$work_data$as_is, values$work_data$to_be, values$work_data$sample_size_per_group)) +
+      scale_x_continuous(breaks = seq(-4,6,1)) +
+      scale_colour_manual(breaks = c("H0 is True", "H1 is True"), values = c("#104E8B", "#EE2C2C")) +
+      theme_bw()
+    p <- ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
+    p$elementId <- NULL
+    p
   })
   
   # --------------------------
   # Output : PMF Plot
   # --------------------------
   output$pmf_plot <- renderPlotly({
-    if(input$btn_go == 0 | !"pmf" %in% isolate(input$optional_plot)){
-      plot_ly(type="scatter", mode = "markers") %>% 
-        layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
-               yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
-      
-    }else{
-     g <- ggplot(values$pmf_data, aes(x = n, y = pmf, group = group, color = group)) + 
-       geom_line(size = 0.5) +
-       geom_point(shape = 21, size = 0.8) +
-       scale_color_manual(values = c("#104E8B", "#EE2C2C")) +
-       theme_bw() +
-       theme(legend.position = "top") + 
-       labs(y = "percent")
-     ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
+    p <- plot_ly(type="scatter", mode = "markers") %>% 
+      layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
+             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+    p$elementId <- NULL
+    
+    if(input$test_method == "t.test" | input$btn_go == 0 | !"pmf" %in% isolate(input$optional_plot)){
+      return(p) 
     }
+    
+    if(nrow(values$work_data) > 0){
+      if(values$work_data[["test_method"]] != "prop.test"){
+        return(p)
+      }
+    }
+    
+    g <- ggplot(values$pmf_data, aes(x = n, y = pmf, group = group, color = group)) + 
+      geom_line(size = 0.5) +
+      geom_point(shape = 21, size = 0.8) +
+      scale_color_manual(values = c("#104E8B", "#EE2C2C")) +
+      theme_bw() +
+      theme(legend.position = "top") + 
+      labs(y = "percent")
+    p <- ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
+    p$elementId <- NULL
+    p
+    
   })
   
   # --------------------------
