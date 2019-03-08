@@ -22,9 +22,12 @@ shinyUI(
                       tippy::tippy_this(elementId = "info_uu",tooltip = "Number of Unique Users of your experiment",placement = "right")
                     )
                   ),
-                  column(2, numericInput('test_period', "Test Period", 14)),
+                  column(2, 
+                    p(HTML("<b>Test Period</b>"),span(shiny::icon("info-circle"), id = "info_test_period"),numericInput('test_period', NULL, 14),
+                      tippy::tippy_this(elementId = "info_test_period",tooltip = "Only used when you check 'Running Lift'",placement = "right")
+                    )
+                  ),
                   column(3, numericInput('number_of_samples', "Number of Samples", 2, min = 2, max = 100, step = 1)),
-                  column(3, numericInput('number_of_comparison', "Number of Comparison", 1)),
                   column(2, uiOutput("ui_max_comparison"))
                 ),
               fluidRow(
@@ -33,25 +36,38 @@ shinyUI(
                 column(4, uiOutput("ui_current_lift"))
               ),
               fluidRow(
-                column(4, numericInput('alpha', "α", 0.05, min = 0.01, max = 0.10, step = 0.01)),
-                column(4, numericInput('power', "1 - β", 0.80, min = 0.80, max = 0.99, step = 0.01)),
+                column(4, numericInput('alpha', "significance level = α", 0.05, min = 0.01, max = 0.10, step = 0.01)),
+                column(4, numericInput('power', "power = 1 - β", 0.80, min = 0.80, max = 0.99, step = 0.01)),
                 column(4, radioButtons('alternative', "Choose test", choices  = c("two.sided","one.sided"), selected = "two.sided", inline = F))
+              ),
+              fluidRow(
+                column(3,
+                       p(HTML("<b>(Optional) Case</b>"),span(shiny::icon("info-circle"), id = "info_optional_case"), textInput('optional_case', NULL, ""),
+                         tippy::tippy_this(elementId = "info_optional_case", tooltip = "You can annotate any label per experimental plan.", placement = "right")
+                       )
+                ),
+                column(9, 
+                       p(HTML("<b>(Optional) Choose plot</b>"),span(shiny::icon("info-circle"), id = "info_optional_plot"), 
+                         checkboxGroupInput("optional_plot", NULL, 
+                                            choices = c("Sample Size × Lift" = "lift_plot", "Running Lift" = "running_lift_plot", "Reject region and Power" = "rrp", "Probability Mass Function" = "pmf"), 
+                                            selected = c("lift_plot","running_lift_plot","rrp","pmf"), inline = T),
+                         tippy::tippy_this(elementId = "info_optional_plot", tooltip = "You can choose multiple plots for understanding AB Test.", placement = "right")
+                       )    
+                )
               ),
               fluidRow(
                 column(12, actionButton("btn_go", "Add Record"))
               )     
             ),
-            box(title = "Option", width = 3, solidHeader = T, status = "primary", 
+            box(title = "Updater", width = 3, solidHeader = T, status = "primary", 
               fluidRow(
                 column(6, numericInput('lift', "Lift (%)", 5, min = 0.01, max = 999, step = 0.01)),
                 column(6, actionButton("btn_cal", "Update 'To Be'"))
               ),
               column(12, hr()),
               fluidRow(
-                column(6, textInput('optional_case', "(Optional) Case", "")),
-                column(6, checkboxGroupInput("optional_plot", "Plot", 
-                                             choices = c("Sample Size × Lift" = "lift_plot", "PMF" = "pmf", "Running Lift" = "running_lift_plot"), 
-                                             selected = c("lift_plot","pmf","running_lift_plot")))
+                column(6, numericInput('number_of_comparison', "Number of Comparison", 1, step = 1)),
+                column(6, actionButton("btn_com", "Update 'α'"))
               )
             ),
             box(title = "Summary of TypeⅠ and TypeⅡ Errors", width = 3, solidHeader = T, status = "primary", 
@@ -64,14 +80,17 @@ shinyUI(
                 column(11, uiOutput("ui_unvisible_columns"))
               )
             ),
-            box(title = "Sample Size × Lift", width = 6, solidHeader = T, status = "success", 
-              plotlyOutput("simulation_plot")
+            tabBox(
+              title = "", width = 6,
+              # The id lets us use input$tabset1 on the server to find the current tab
+              id = "tabset1",
+              tabPanel("Sample Size × Lift", plotlyOutput("simulation_plot")),
+              tabPanel("Running Lift", plotlyOutput("running_lift"))
             ),
-            box(title = "Probability Mass Function", width = 6, solidHeader = T, status = "success", 
-              plotOutput("pmf_plot")
-            ),
-            box(title = "Running Lift", width = 6, solidHeader = T, status = "success", 
-              plotlyOutput("running_lift")
+            tabBox(title = "", width = 6, 
+              id = "tabset2",
+              tabPanel("Reject region and Power", plotlyOutput("rrp_plot")),
+              tabPanel("Probability Mass Function", plotlyOutput("pmf_plot"))
             )
           )
         ),
@@ -83,7 +102,3 @@ shinyUI(
     )
   )
 )
-
-
-c("lad.ad", "lad.adconfig", "lad.ad_event_lads", "lad.ad_filter", "lad.adaccount", "lad.adaccount_billing_link", "lad.adaccount_block_category", "lad.adgroup", "lad.app_conversion_ad", "lad.app_conversion_adgroup_breakdown", "lad.audience_group", "lad.billing", "lad.billing_owner", "lad.brid_to_idfa", "lad.campaign", "lad.creative", "lad.creative_asset", "lad.custom_conversion_ad", "lad.custom_conversion_adgroup_breakdown", "lad.group", "lad.group_adaccount_link", "lad.hike_adspot", "lad.hike_adspot_ctid", "lad.inventory", "lad.inventory_ad_config", "lad.inventory_ad_style", "lad.lads_event", "lad.lads_service_v1", "lad.lasm_hourly_report", "lad.lass_ad_response", "lad.lass_event", "lad.line_tag_user", "lad.media", "lad.mediation", "lad.mediation_rule", "lad.prefill_webtraffic_audience_group", "lad.prefill_webtraffic_url_condition", "lad.publisher", "lad.report_ad", "lad.report_adgroup_breakdown", "lad.review", "lad.service", "lad.service_group", "lad.targeting", "lad.targeting_audience", "lad.targeting_spec", "lad.user", "lad.user_adaccount_access", "lad.user_group_access", "lad.visual_format")
-

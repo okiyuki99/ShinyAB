@@ -6,7 +6,6 @@ shinyServer(function(input, output, session){
   values$pmf_data <- data.frame(stringsAsFactors = F)
   values$reject_line <- 0
   values$selected_columns <- c()
-  #values$power_estimate <- 0
   
   id_notification <- ""
   
@@ -27,35 +26,46 @@ shinyServer(function(input, output, session){
   output$ui_unvisible_columns <- renderUI({
     checkboxGroupInput(
       "unvisible_columns", NULL, 
-      choices = c("UU" = "UU", "alpha" = "alpha", "power" = "power","test" = "test", "current_value" = "current_value",
-                  "expected_value" = "expected_value", "sample_size_per_group" = "sample_size_per_group",
+      choices = c("UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power","test" = "test", "as_is" = "as_is",
+                  "to_be" = "to_be", "sample_size_per_group" = "sample_size_per_group",
                   "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"), 
-      selected = c("UU","alpha","power","test","current_value","expected_value","sample_size_per_group","required_sample_size","sampling_rate"),
-      inline = T)
+      selected = c("UU","number_of_samples","alpha","power","test","as_is","to_be","sample_size_per_group","required_sample_size","sampling_rate"),
+      inline = T
+    )
+    #selectInput(
+    #  "unvisible_columns", NULL, 
+    #  choices = c("UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power","test" = "test", "as_is" = "as_is",
+    #              "to_be" = "to_be", "sample_size_per_group" = "sample_size_per_group",
+    #              "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"), 
+    #  selected = c("UU","number_of_samples","alpha","power","test","as_is","to_be","sample_size_per_group","required_sample_size","sampling_rate"),
+    #  multiple = T
+    #)
   })
   
   # --------------------------
   # Create Data for table and plot
   observeEvent(input$btn_go, {
     # from input
+    number_of_samples <- input$number_of_samples
     alpha <- input$alpha
     power <- input$power
     current_value <- input$current_value
     expected_value <- input$expected_value
     alternative <- input$alternative
+    unvisible_columns <- input$unvisible_columns
     
     # calculate sample size
     sample_size_per_group <- ceiling(power.prop.test(n = NULL, 
                                                      p1 = current_value, p2 = expected_value,
                                                      sig.level = alpha, power = power, alternative = alternative)$n)
-    required_sample_size <- input$number_of_samples * sample_size_per_group
+    required_sample_size <- number_of_samples * sample_size_per_group
     sampling_rate <- required_sample_size / input$uu
-    values$work_data <- data.frame(UU = input$uu, alpha, power, test = alternative,
-                                   current_value = current_value, 
-                                   expected_value = expected_value, 
+    values$work_data <- data.frame(UU = input$uu, number_of_samples, alpha, power, test = alternative,
+                                   as_is = current_value, 
+                                   to_be = expected_value, 
                                    sample_size_per_group,
                                    required_sample_size, 
-                                   sampling_rate, 
+                                   sampling_rate,
                                    stringsAsFactors = F)
     
     # create case label
@@ -68,8 +78,13 @@ shinyServer(function(input, output, session){
     
     # bind data
     values$data <- bind_rows(values$data, values$work_data) 
+    
     if("case" %in% names(values$data)){
-      values$data <- select(values$data, case, everything())
+      updateCheckboxGroupInput(session, "unvisible_columns", NULL,
+                               choices = c("case" = "case", "UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power","test" = "test", "as_is" = "as_is",
+                                           "to_be" = "to_be", "sample_size_per_group" = "sample_size_per_group",
+                                           "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"),
+                               selected = c("case",unvisible_columns), inline = T)
     }
     
     # create data for pmf plot
@@ -79,9 +94,7 @@ shinyServer(function(input, output, session){
       ind <- pmf_as_is >= 0.0001 | pmf_to_be >= 0.0001 
       values$pmf_data <- bind_rows(data.frame(n = c(0:sample_size_per_group)[ind], pmf = pmf_as_is[ind], group = "as_is", stringsAsFactors = F),
                                    data.frame(n = c(0:sample_size_per_group)[ind], pmf = pmf_to_be[ind], group = "to_be", stringsAsFactors = F))
-      values$reject_line <- min(which(cumsum(pmf_as_is) >= (1.0 - alpha/2))) # 両側検定の右側の棄却域を求める
     }
-    #values$power_estimate <- round(100 * (1.0 - cumsum(pmf_to_be)[values$reject_line]),2)
   })
   
   # --------------------------
@@ -92,14 +105,26 @@ shinyServer(function(input, output, session){
   })
   
   # --------------------------
+  # Update alpha from number of comparison based on Bonferroni correction
+  # --------------------------
+  observeEvent(input$btn_com,{
+    updateNumericInput(session, "alpha", value = input$alpha / input$number_of_comparison)
+  })
+  
+  # --------------------------
   # Remove Row of Table
   # --------------------------
   observeEvent(input$btn_remove,{
     if(nrow(values$data) > 0){
-      values$data <- slice(values$data, 1:nrow(values$data)-1)
+      values$data <- dplyr::slice(values$data, 1:nrow(values$data)-1)
       if("case" %in% names(values$data)){
         if(all(is.na(values$data["case"]))){
           values$data["case"] <- NULL
+          updateCheckboxGroupInput(session, "unvisible_columns", NULL,
+                                   choices = c("UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power","test" = "test", "as_is" = "as_is",
+                                               "to_be" = "to_be", "sample_size_per_group" = "sample_size_per_group",
+                                               "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"),
+                                   selected = setdiff(input$unvisible_columns, "case"), inline = T)
         }
       }
     }
@@ -110,6 +135,7 @@ shinyServer(function(input, output, session){
   # --------------------------
   output$kable_proportion <- function() {
     if(nrow(values$data) > 0){
+      
       values$data %>%
         replace(is.na(.), "") %>%
         mutate(sampling_rate = paste0(round(sampling_rate * 100, 2),"%")) %>%
@@ -118,8 +144,10 @@ shinyServer(function(input, output, session){
         mutate(required_sample_size = cell_spec(required_sample_size, color = "blue")) %>%
         mutate(sampling_rate = cell_spec(sampling_rate, color = "blue")) %>%
         select(input$unvisible_columns) %>%
+        save_to(num_cols, ncol) %>%
         knitr::kable(align = "r", escape = F) %>% 
-        kable_styling(c("striped", "bordered"), full_width = T)
+        kable_styling(c("striped", "bordered"), full_width = T) %>%
+        collapse_rows(columns = 1:num_cols, valign = "top")
     }  
   }
 
@@ -148,7 +176,7 @@ shinyServer(function(input, output, session){
       df <- data.frame(lift = lift * 100, sample_size_per_groups, stringsAsFactors = F)
       p <- plot_ly(df, x = ~lift, y = ~sample_size_per_groups) %>% 
         add_trace(showlegend = F, type = "scatter", mode = 'lines+markers') %>%
-        layout(title = paste("current value:",current_value, "alpha:",alpha, "power:",power), 
+        layout(title = paste("as is:",current_value, "alpha:",alpha, "power:",power), 
                yaxis = list(title = "sample size per group", exponentformat = "none"), xaxis = list(title = "Lift (%)", dtick = 5))
       p 
     }
@@ -183,7 +211,7 @@ shinyServer(function(input, output, session){
       p <- plot_ly(df, x = ~period) %>% 
         add_trace(y = ~lifts, name = "Lift(%)", showlegend = T, type = "scatter", mode = 'lines+markers') %>%
         add_trace(y = ~uu, name = "Sample Size", showlegend = T, type = "scatter", mode = 'lines+markers', yaxis = "y2") %>%
-        layout(title = paste("current value:",current_value, "alpha:",alpha, "power:",power), 
+        layout(title = paste("as is:",current_value, "alpha:",alpha, "power:",power), 
                legend = list(orientation = 'h'),
                yaxis = list(title = "Lift(%)", exponentformat = "none"), 
                yaxis2 = list(title = "Sample Size",exponentformat = "none", overlaying = "y", side = "right", automargin = TRUE),
@@ -193,20 +221,58 @@ shinyServer(function(input, output, session){
   })
   
   # --------------------------
+  # Output : Reject region and Power Plot
+  # --------------------------
+  output$rrp_plot <- renderPlotly({
+    if(input$btn_go == 0 | !"rrp" %in% isolate(input$optional_plot)){
+      plot_ly(type="scatter", mode = "markers") %>% 
+        layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
+               yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+      
+    }else{
+      alpha <- isolate(input$alpha)
+      power <- isolate(input$power)
+      
+      df <- data_power_prop_test(values$work_data$sample_size_per_group, 
+                                 values$work_data$sample_size_per_group, 
+                                 values$work_data$as_is, 
+                                 values$work_data$to_be)
+      g <- ggplot(df, aes(x = x) ) +
+        geom_line(aes(y = y1, colour = 'H0 is True'), size = 0.5) +
+        geom_line(aes(y = y2, colour = 'H1 is True'), size = 0.5) +
+        geom_point(aes(y = y1, colour = 'H0 is True'), shape = 21, size = 1) +
+        geom_point(aes(y = y2, colour = 'H1 is True'), shape = 21, size = 1) +
+        geom_area(aes(y = y1, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = "#333333", na.rm = T) +
+        geom_area(aes(y = y2, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = '#00CD00', alpha = 0.3, na.rm = T) +
+        annotate("text", x = qnorm(alpha / 2, lower.tail = F) + 0.5, y = 0.2, label=paste0("Power\r\n",round(100 * power,1),"%")) +
+        labs(x = '', y = '', 
+             title = sprintf('as_is: %s to_be : %s sample_size = %d', 
+                             values$work_data$as_is, values$work_data$to_be, values$work_data$sample_size_per_group)) +
+        scale_x_continuous(breaks = seq(-4,6,1)) +
+        scale_colour_manual(breaks = c("H0 is True", "H1 is True"), values = c("#104E8B", "#EE2C2C")) +
+        theme_bw()
+      ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
+    }
+  })
+  
+  # --------------------------
   # Output : PMF Plot
   # --------------------------
-  output$pmf_plot <- renderPlot({
-    input$btn_go
-    
-    if(nrow(values$pmf_data) > 0 & "pmf" %in% isolate(input$optional_plot)){
-      ggplot(values$pmf_data, aes(x = n, y = pmf, group = group, color = group)) + 
-        geom_line() +
-        scale_color_manual(values = c("#00008B","#B22222")) +
-        theme_bw() +
-        theme(legend.position = "top") + 
-        geom_vline(xintercept = values$reject_line, colour="#5d5d5d", linetype="longdash") +
-        geom_text(aes(x = values$reject_line, label = paste0("Right rejected region for binom test: \r\n", values$reject_line), y = 0), alpha = 0.5, colour="#5d5d5d", angle = 0,  hjust = 0, vjust = 0) +
-        labs(y = "percent")
+  output$pmf_plot <- renderPlotly({
+    if(input$btn_go == 0 | !"pmf" %in% isolate(input$optional_plot)){
+      plot_ly(type="scatter", mode = "markers") %>% 
+        layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
+               yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+      
+    }else{
+     g <- ggplot(values$pmf_data, aes(x = n, y = pmf, group = group, color = group)) + 
+       geom_line(size = 0.5) +
+       geom_point(shape = 21, size = 0.8) +
+       scale_color_manual(values = c("#104E8B", "#EE2C2C")) +
+       theme_bw() +
+       theme(legend.position = "top") + 
+       labs(y = "percent")
+     ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
     }
   })
   
