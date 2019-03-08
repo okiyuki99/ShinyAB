@@ -11,5 +11,5 @@ https://gingi99.shinyapps.io/ShinyAB/
 
 ## Visual Feature
 
-![image](docs/top1.png)
+![image](docs/top2.png)
 
