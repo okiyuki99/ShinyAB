@@ -22,6 +22,10 @@ https://gingi99.shinyapps.io/ShinyAB/
 
 Inspired by timwilson7, I added plot Lift running day from his great [posts](https://www.searchdiscovery.com/blog/sample-size-calculation-myth-buster-edition/).
 
+## Shinyloadtest
+
+[shinyloadtest report](https://okiyuki99.github.io/ShinyAB/shinyloadtest_report.html)
+
 ## Reference
 * [Shiny Contest Submission : ShinyAB - Shiny Apps Calculator of Sample Size for AB test](https://community.rstudio.com/t/shiny-contest-submission-shinyab-shiny-apps-calculator-of-sample-size-for-ab-test/25675)
 
