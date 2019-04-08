@@ -1,5 +1,5 @@
 shinyUI(
-  dashboardPage(title = "ShinyAB Design",
+  dashboardPage(title = "ShinyAB",
     dashboardHeader(title = logo_grey_light, titleWidth = 250),
     dashboardSidebar(
       collapsed = TRUE, # sidebar hide

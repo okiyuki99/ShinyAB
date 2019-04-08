@@ -337,6 +337,7 @@ shinyServer(function(input, output, session){
     p <- ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
     p$elementId <- NULL
     p
+    g
   })
   
   # --------------------------
@@ -358,6 +359,7 @@ shinyServer(function(input, output, session){
       }
     }
     
+    print("a")
     g <- ggplot(values$pmf_data, aes(x = n, y = pmf, group = group, color = group)) + 
       geom_line(size = 0.5) +
       geom_point(shape = 21, size = 0.8) +
@@ -368,7 +370,6 @@ shinyServer(function(input, output, session){
     p <- ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
     p$elementId <- NULL
     p
-    
   })
   
   # --------------------------
