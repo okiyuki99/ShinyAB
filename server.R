@@ -64,6 +64,12 @@ shinyServer(function(input, output, session){
     }
   })
   
+  output$ui_dlbtn <- renderUI({
+    if(nrow(values$data) > 0){
+      downloadButton("dl_data", "Download")
+    }
+  })
+  
   # --------------------------
   # Insert unvisible columns
   output$ui_unvisible_columns <- renderUI({
@@ -158,6 +164,18 @@ shinyServer(function(input, output, session){
   })
   
   # --------------------------
+  # Download CSV Table
+  # --------------------------
+  output$dl_data <- downloadHandler(
+    filename = function() { 
+      paste0("data-", format(Sys.time(),"%Y%m%d-%H%M%S"), ".csv")
+    },
+    content = function(file) {
+      write.csv(values$data, file)
+    }
+  )
+
+  # --------------------------
   # Output : summary table
   # --------------------------
   output$kable_proportion <- function() {
@@ -214,9 +232,10 @@ shinyServer(function(input, output, session){
                               sig.level = alpha, power = power, alternative = alternative)$n)})
     
     df <- data.frame(lift = lift * 100, sample_size_per_groups, stringsAsFactors = F)
-    p <- plot_ly(df, x = ~lift, y = ~sample_size_per_groups) %>% 
-      add_trace(showlegend = F, type = "scatter", mode = 'lines+markers') %>%
-      layout(title = paste("as is:",current_value, "alpha:",alpha, "power:",power), 
+
+    p <- plot_ly(df, x = ~lift, y = ~sample_size_per_groups, text = ~paste0('Lift(%) : ', lift, '\r\nsample size per group : ', format(sample_size_per_groups, big.mark = ',')), hoverinfo = "text") %>% 
+      add_trace(showlegend = F, type = "scatter", mode = 'lines+markers', line = list(color = "#67BF5C"), marker = list(color = "#67BF5C")) %>%
+      layout(title = paste("As Is:",current_value, "alpha:",alpha, "power:",power), 
              yaxis = list(title = "sample size per group", exponentformat = "none"), xaxis = list(title = "Lift (%)", dtick = 5)) %>%
       config(displayModeBar = F)
     p$elementId <- NULL
@@ -260,12 +279,12 @@ shinyServer(function(input, output, session){
     
     df <- data.frame(lifts, period = 1:test_period, uu = 1:test_period * uu_daily, stringsAsFactors = F)
     p <- plot_ly(df, x = ~period) %>% 
-      add_trace(y = ~lifts, name = "Lift(%)", showlegend = T, type = "scatter", mode = 'lines+markers') %>%
-      add_trace(y = ~uu, name = "Sample Size", showlegend = T, type = "scatter", mode = 'lines+markers', yaxis = "y2") %>%
-      layout(title = paste("as is:",current_value, "alpha:",alpha, "power:",power), 
+      add_trace(y = ~lifts, name = "Lift(%)", text = ~paste0('Running Day : ', period, '\r\nLift (%) : ', round(lifts,2)), hoverinfo = "text", showlegend = T, type = "scatter", mode = 'lines+markers', line = list(color = "#67BF5C"), marker = list(color = "#67BF5C")) %>%
+      add_trace(y = ~uu, name = "Sample Size", text = ~paste0('Running Day : ', period, '\r\nSample Size : ', format(uu, big.mark = ",")), hoverinfo = "text", showlegend = T, type = "scatter", mode = 'lines+markers', yaxis = "y2", line = list(color = "#ED97CA"), marker = list(color = "#ED97CA")) %>%
+      layout(title = paste("As Is:",current_value, "alpha:",alpha, "power:",power), 
              legend = list(orientation = 'h'),
              yaxis = list(title = "Lift(%)", exponentformat = "none"), 
-             yaxis2 = list(title = "Sample Size",exponentformat = "none", overlaying = "y", side = "right", automargin = TRUE),
+             yaxis2 = list(title = "Sample Size",exponentformat = "none", overlaying = "y", side = "right", automargin = T),
              xaxis = list(title = "Running Day", dtick = 1)) %>%
       config(displayModeBar = F)
     p$elementId <- NULL
@@ -305,14 +324,14 @@ shinyServer(function(input, output, session){
       geom_line(aes(y = y2, colour = 'H1 is True'), size = 0.5) +
       geom_point(aes(y = y1, colour = 'H0 is True'), shape = 21, size = 1) +
       geom_point(aes(y = y2, colour = 'H1 is True'), shape = 21, size = 1) +
-      geom_area(aes(y = y1, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = "#333333", na.rm = T) +
-      geom_area(aes(y = y2, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = '#00CD00', alpha = 0.3, na.rm = T) +
+      geom_area(aes(y = y1, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = "#67BF5C", na.rm = T) +
+      geom_area(aes(y = y2, x = ifelse(x > qnorm(alpha / 2, lower.tail = F), x, NA)), fill = '#67BF5C', alpha = 0.3, na.rm = T) +
       annotate("text", x = qnorm(alpha / 2, lower.tail = F) + 0.5, y = 0.2, label=paste0("Power\r\n",round(100 * power,1),"%")) +
       labs(x = '', y = '', 
-           title = sprintf('as_is: %s to_be : %s sample_size = %d', 
+           title = sprintf('As Is: %s To Be : %s Sample Size = %d', 
                            values$work_data$as_is, values$work_data$to_be, values$work_data$sample_size_per_group)) +
       scale_x_continuous(breaks = seq(-4,6,1)) +
-      scale_colour_manual(breaks = c("H0 is True", "H1 is True"), values = c("#104E8B", "#EE2C2C")) +
+      scale_colour_manual(breaks = c("H0 is True", "H1 is True"), values = c("#729ECE", "#FF9E4A")) +
       theme_bw()
     p <- ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9)) %>% config(displayModeBar = F)
     p$elementId <- NULL
@@ -342,7 +361,7 @@ shinyServer(function(input, output, session){
     g <- ggplot(values$pmf_data, aes(x = n, y = pmf, group = group, color = group)) + 
       geom_line(size = 0.5) +
       geom_point(shape = 21, size = 0.8) +
-      scale_color_manual(values = c("#104E8B", "#EE2C2C")) +
+      scale_color_manual(values = c("#729ECE", "#FF9E4A")) +
       theme_bw() +
       theme(legend.position = "top") + 
       labs(y = "percent")
