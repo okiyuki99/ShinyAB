@@ -1,19 +1,22 @@
 shinyUI(
-  dashboardPage(title = "ShinyAB",
+  dashboardPage(title = "ShinyAB Design",
     dashboardHeader(title = logo_grey_light, titleWidth = 250),
     dashboardSidebar(
-      collapsed = TRUE, # sidebar hide
+      collapsed = T,
       width = 150,
       sidebarMenu(
-        menuItem("AB Design", icon=icon("info"), tabName = "menu1")
+        menuItem("AB Design", icon = icon("th"), tabName = "menu_top"),
+        menuItem("Github", icon = icon("github"), href = "https://github.com/okiyuki99/ShinyAB"),
+        menuItem("RStudio Cloud", icon = icon("cloud"), href = "https://rstudio.cloud/project/245977"),
+        menuItem("shinyapps.io", icon = icon("external-link-square"), href = "https://gingi99.shinyapps.io/ShinyAB"),
+        menuItem("About", icon = icon("question-circle-o"), tabName = "menu_about")
       )
     ),
     dashboardBody(
       shinyDashboardThemes(theme = "grey_light"),
       tabItems(
-        tabItem(
-          tabName = "menu1",
-            fluidRow(
+        tabItem(tabName = "menu_top",
+          fluidRow(
               box(title = "Parameter", width = 6, solidHeader = T, status = "primary", 
                   fluidRow(
                     column(3, 
@@ -35,13 +38,6 @@ shinyUI(
                     column(3, numericInput('power', "power = 1 - β", 0.80, min = 0.80, max = 0.99, step = 0.01))
                   ),
                   uiOutput("ui_test_method_paramter"),
-                  fluidRow(
-                    column(3,
-                           p(HTML("<b>(Optional) Case</b>"),span(shiny::icon("info-circle"), id = "info_optional_case"), textInput('optional_case', NULL, ""),
-                             tippy::tippy_this(elementId = "info_optional_case", tooltip = "You can annotate any label per experimental plan.", placement = "right")
-                           )
-                    )
-                  ),
                   fluidRow(
                     column(12, actionButton("btn_go", "Add Record"))
                   )     
@@ -69,7 +65,6 @@ shinyUI(
             ),
             tabBox(
               title = "", width = 6,
-              # The id lets us use input$tabset1 on the server to find the current tab
               id = "tabset1",
               tabPanel("Sample Size × Lift", plotlyOutput("simulation_plot")),
               tabPanel("Running Lift", plotlyOutput("running_lift"))
@@ -79,6 +74,12 @@ shinyUI(
               tabPanel("Reject region and Power", plotlyOutput("rrp_plot")),
               tabPanel("Probability Mass Function", plotlyOutput("pmf_plot"))
             )
+          )
+        ),
+        tabItem(tabName = "menu_about",
+          HTML("The application is a calculator of sample size for AB test including the following functions : <br>
+            1. informative tables for supporting understanding of statistical Type I and II error <br>
+            2. various visualization of control and treatment groups regarding AB Test"
           )
         )
       )

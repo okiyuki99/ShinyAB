@@ -121,25 +121,8 @@ shinyServer(function(input, output, session){
                                    sampling_rate,
                                    stringsAsFactors = F)
     
-    # create case label
-    optional_label <- isolate(input$optional_case)
-    if(optional_label != ""){
-      values$work_data[["case"]] <- optional_label
-    }else if(optional_label == "" & "case" %in% names(values$data)){
-      values$work_data[["case"]] <- ""
-    }
-    
     # bind data
     values$data <- bind_rows(values$data, values$work_data) 
-    
-    if("case" %in% names(values$data)){
-      updateCheckboxGroupInput(session, "unvisible_columns", NULL,
-                               choices = c("case" = "case", "UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power",
-                                           "test_method" = "test_method", "as_is" = "as_is",
-                                           "to_be" = "to_be", "sample_size_per_group" = "sample_size_per_group",
-                                           "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"),
-                               selected = c("case",unvisible_columns), inline = T)
-    }
     
     # create data for pmf plot
     if("pmf" %in% input$optional_plot){
@@ -171,17 +154,6 @@ shinyServer(function(input, output, session){
   observeEvent(input$btn_remove,{
     if(nrow(values$data) > 0){
       values$data <- dplyr::slice(values$data, 1:nrow(values$data)-1)
-      if("case" %in% names(values$data)){
-        if(all(is.na(values$data["case"]))){
-          values$data["case"] <- NULL
-          updateCheckboxGroupInput(session, "unvisible_columns", NULL,
-                                   choices = c("UU" = "UU", "number_of_samples" = "number_of_samples", "alpha" = "alpha", "power" = "power",
-                                               "test_method" = "test_method", "as_is" = "as_is",
-                                               "to_be" = "to_be", "sample_size_per_group" = "sample_size_per_group",
-                                               "required_sample_size" = "required_sample_size", "sampling_rate" = "sampling_rate"),
-                                   selected = setdiff(input$unvisible_columns, "case"), inline = T)
-        }
-      }
     }
   })
   
@@ -189,21 +161,24 @@ shinyServer(function(input, output, session){
   # Output : summary table
   # --------------------------
   output$kable_proportion <- function() {
-    if(nrow(values$data) > 0){
-      
-      values$data %>%
-        replace(is.na(.), "") %>%
-        mutate(sampling_rate = paste0(round(sampling_rate * 100, 2),"%")) %>%
-        mutate_if(is.numeric, function(x){formatC(x,format = "f", big.mark = ",", drop0trailing = T)}) %>%
-        mutate(sample_size_per_group = cell_spec(sample_size_per_group, color = "blue")) %>%
-        mutate(required_sample_size = cell_spec(required_sample_size, color = "blue")) %>%
-        mutate(sampling_rate = cell_spec(sampling_rate, color = "blue")) %>%
-        select(input$unvisible_columns) %>%
-        save_to(num_cols, ncol) %>%
-        knitr::kable(align = "r", escape = F) %>% 
-        kable_styling(c("striped", "bordered"), full_width = T) %>%
-        collapse_rows(columns = 1:num_cols, valign = "top")
-    }  
+    shiny::req(values$data)
+    
+    if(nrow(values$data) == 0){
+      return(NULL)
+    }
+    
+    values$data %>%
+      replace(is.na(.), "") %>%
+      mutate(sampling_rate = paste0(round(sampling_rate * 100, 2),"%")) %>%
+      mutate_if(is.numeric, function(x){formatC(x,format = "f", big.mark = ",", drop0trailing = T)}) %>%
+      mutate(sample_size_per_group = cell_spec(sample_size_per_group, color = "blue")) %>%
+      mutate(required_sample_size = cell_spec(required_sample_size, color = "blue")) %>%
+      mutate(sampling_rate = cell_spec(sampling_rate, color = "blue")) %>%
+      select(input$unvisible_columns) %>%
+      save_to(num_cols, ncol) %>%
+      knitr::kable(align = "r", escape = F) %>% 
+      kable_styling(c("striped", "bordered"), full_width = T) %>%
+      collapse_rows(columns = 1:num_cols, valign = "top")
   }
 
   # --------------------------
@@ -212,7 +187,8 @@ shinyServer(function(input, output, session){
   output$simulation_plot <- renderPlotly({
     p <- plot_ly(type="scatter", mode = "markers") %>% 
       layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
-             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F)) %>%
+      config(displayModeBar = F)
     p$elementId <- NULL
     
     if(input$test_method == "t.test" | input$btn_go == 0 | !"lift_plot" %in% isolate(input$optional_plot)){
@@ -241,7 +217,8 @@ shinyServer(function(input, output, session){
     p <- plot_ly(df, x = ~lift, y = ~sample_size_per_groups) %>% 
       add_trace(showlegend = F, type = "scatter", mode = 'lines+markers') %>%
       layout(title = paste("as is:",current_value, "alpha:",alpha, "power:",power), 
-             yaxis = list(title = "sample size per group", exponentformat = "none"), xaxis = list(title = "Lift (%)", dtick = 5))
+             yaxis = list(title = "sample size per group", exponentformat = "none"), xaxis = list(title = "Lift (%)", dtick = 5)) %>%
+      config(displayModeBar = F)
     p$elementId <- NULL
     p
   })
@@ -252,7 +229,8 @@ shinyServer(function(input, output, session){
   output$running_lift <- renderPlotly({
     p <- plot_ly(type="scatter", mode = "markers") %>% 
       layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
-             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F)) %>%
+      config(displayModeBar = F)
     p$elementId <- NULL
     
     if(input$test_method == "t.test" | input$btn_go == 0 | !"running_lift_plot" %in% isolate(input$optional_plot)){
@@ -288,7 +266,8 @@ shinyServer(function(input, output, session){
              legend = list(orientation = 'h'),
              yaxis = list(title = "Lift(%)", exponentformat = "none"), 
              yaxis2 = list(title = "Sample Size",exponentformat = "none", overlaying = "y", side = "right", automargin = TRUE),
-             xaxis = list(title = "Running Day", dtick = 1))
+             xaxis = list(title = "Running Day", dtick = 1)) %>%
+      config(displayModeBar = F)
     p$elementId <- NULL
     p 
   })
@@ -299,7 +278,8 @@ shinyServer(function(input, output, session){
   output$rrp_plot <- renderPlotly({
     p <- plot_ly(type="scatter", mode = "markers") %>% 
       layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
-             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F)) %>%
+      config(displayModeBar = F)
     p$elementId <- NULL
     
     if(input$test_method == "t.test" | input$btn_go == 0 | !"rrp" %in% isolate(input$optional_plot)){
@@ -334,10 +314,9 @@ shinyServer(function(input, output, session){
       scale_x_continuous(breaks = seq(-4,6,1)) +
       scale_colour_manual(breaks = c("H0 is True", "H1 is True"), values = c("#104E8B", "#EE2C2C")) +
       theme_bw()
-    p <- ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
+    p <- ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9)) %>% config(displayModeBar = F)
     p$elementId <- NULL
     p
-    g
   })
   
   # --------------------------
@@ -346,7 +325,8 @@ shinyServer(function(input, output, session){
   output$pmf_plot <- renderPlotly({
     p <- plot_ly(type="scatter", mode = "markers") %>% 
       layout(xaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F), 
-             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F))
+             yaxis = list(showticklabels = F, showline = F, zeroline = F, showgrid = F)) %>% 
+      config(displayModeBar = F)
     p$elementId <- NULL
     
     if(input$test_method == "t.test" | input$btn_go == 0 | !"pmf" %in% isolate(input$optional_plot)){
@@ -359,7 +339,6 @@ shinyServer(function(input, output, session){
       }
     }
     
-    print("a")
     g <- ggplot(values$pmf_data, aes(x = n, y = pmf, group = group, color = group)) + 
       geom_line(size = 0.5) +
       geom_point(shape = 21, size = 0.8) +
@@ -367,7 +346,7 @@ shinyServer(function(input, output, session){
       theme_bw() +
       theme(legend.position = "top") + 
       labs(y = "percent")
-    p <- ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9))
+    p <- ggplotly(g) %>% layout(legend = list(x = 0.8, y = 0.9)) %>% config(displayModeBar = F)
     p$elementId <- NULL
     p
   })

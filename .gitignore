@@ -5,3 +5,6 @@
 *.Rproj
 old/
 rsconnect/
+shinyloadtest/*.rds
+shinyloadtest/*.log
+shinyloadtest/run*
