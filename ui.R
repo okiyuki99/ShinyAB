@@ -60,7 +60,8 @@ shinyUI(
               tableOutput("kable_proportion"),
               fluidRow(
                 column(1, actionButton("btn_remove", "Remove Record")),
-                column(11, uiOutput("ui_unvisible_columns"))
+                column(1, uiOutput("ui_dlbtn")),
+                column(10, uiOutput("ui_unvisible_columns"))
               )
             ),
             tabBox(
@@ -77,10 +78,7 @@ shinyUI(
           )
         ),
         tabItem(tabName = "menu_about",
-          HTML("The application is a calculator of sample size for AB test including the following functions : <br>
-            1. informative tables for supporting understanding of statistical Type I and II error <br>
-            2. various visualization of control and treatment groups regarding AB Test"
-          )
+          includeMarkdown("docs/about.md")
         )
       )
     )
