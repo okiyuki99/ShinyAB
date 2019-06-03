@@ -1,9 +1,11 @@
 library(dplyr)
 library(tidyr)
 library(knitr)
-library(DT)
+
 library(kableExtra)
+
 library(plotly)
+
 library(tippy)
 library(shiny)
 library(shinydashboard)
