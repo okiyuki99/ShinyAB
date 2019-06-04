@@ -8,7 +8,7 @@ This app built in shiny dashboard contains the following functions.
 3. Various visualization of control and treatment groups regarding AB Test using `plotly` and `ggplot2`
 
 ## Shinyapps
-https://gingi99.shinyapps.io/ShinyAB/
+https://okiyuki.shinyapps.io/ShinyAB/
 
 ## Stats Feature 
 * Support experimental plan for `power.prop.test`
