@@ -1,14 +1,14 @@
 shinyUI(
-  dashboardPage(title = "ShinyAB Design",
-    dashboardHeader(title = logo_grey_light, titleWidth = 250),
+  dashboardPage(title = "ShinyAB",
+    dashboardHeader(title = logo_grey_light, titleWidth = 200),
     dashboardSidebar(
       collapsed = T,
-      width = 150,
+      width = 200,
       sidebarMenu(
         menuItem("AB Design", icon = icon("th"), tabName = "menu_top"),
         menuItem("Github", icon = icon("github"), href = "https://github.com/okiyuki99/ShinyAB"),
         menuItem("RStudio Cloud", icon = icon("cloud"), href = "https://rstudio.cloud/project/245977"),
-        menuItem("shinyapps.io", icon = icon("external-link-square"), href = "https://gingi99.shinyapps.io/ShinyAB"),
+        menuItem("shinyapps.io", icon = icon("external-link-square"), href = "https://okiyuki.shinyapps.io/ShinyAB"),
         menuItem("About", icon = icon("question-circle-o"), tabName = "menu_about")
       )
     ),
@@ -67,13 +67,13 @@ shinyUI(
             tabBox(
               title = "", width = 6,
               id = "tabset1",
-              tabPanel("Sample Size × Lift", plotlyOutput("simulation_plot")),
-              tabPanel("Running Lift", plotlyOutput("running_lift"))
+              tabPanel("Sample Size × Lift", plotlyOutput("simulation_plot") %>% withSpinner(type = 5)),
+              tabPanel("Running Lift", plotlyOutput("running_lift") %>% withSpinner(type = 5))
             ),
             tabBox(title = "", width = 6, 
               id = "tabset2",
-              tabPanel("Reject region and Power", plotlyOutput("rrp_plot")),
-              tabPanel("Probability Mass Function", plotlyOutput("pmf_plot"))
+              tabPanel("Reject region and Power", plotlyOutput("rrp_plot") %>% withSpinner(type = 5)),
+              tabPanel("Probability Mass Function", plotlyOutput("pmf_plot") %>% withSpinner(type = 5))
             )
           )
         ),

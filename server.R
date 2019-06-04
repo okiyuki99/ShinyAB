@@ -26,8 +26,8 @@ shinyServer(function(input, output, session){
           column(4, uiOutput("ui_lift"))
         ),
         fluidRow(
-          column(4, radioButtons('alternative', "Choose two or one sided", choices  = c("two.sided","one.sided"), selected = "two.sided", inline = T)),
-          column(8, 
+          column(3, radioButtons('alternative', "Choose two or one sided", choices  = c("two.sided","one.sided"), selected = "two.sided", inline = T)),
+          column(9, 
                  p(
                    HTML("<b>(Optional) Choose plot</b>"),span(shiny::icon("info-circle"), id = "info_optional_plot"), 
                    checkboxGroupInput("optional_plot", NULL, 
