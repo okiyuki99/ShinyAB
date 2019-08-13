@@ -1,5 +1,7 @@
 shinyServer(function(input, output, session){
   print("Initialize Start")
+  
+  # Reavtive Values --------------------------
   values <- reactiveValues()
   values$data <- data.frame(stringsAsFactors = F)
   values$work_data <- data.frame(stringsAsFactors = F)
@@ -7,16 +9,15 @@ shinyServer(function(input, output, session){
   values$reject_line <- 0
   values$selected_columns <- c()
   
+  # Global values --------------------------
   id_notification <- ""
   
-  # --------------------------
-  # Display Max number of pairs
+  # Display Max number of pairs --------------------------
   output$ui_max_comparison <- renderUI({
     HTML("<div style=\"font-style: italic;\">Max number of pairs :<strong>", base::choose(input$number_of_samples, 2), "</strong></div>")
   })
   
-  # --------------------------
-  # Dynamic UI by per method 
+  # Dynamic UI by per method --------------------------
   output$ui_test_method_paramter <- renderUI({
     if(input$test_method == "prop.test"){
       tagList(
@@ -38,6 +39,7 @@ shinyServer(function(input, output, session){
           )
         )
       )
+    # (Not yet t.test)
     }else if(input$test_method == "t.test"){
       tagList(
         fluidRow(
