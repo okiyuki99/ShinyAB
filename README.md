@@ -1,5 +1,7 @@
 # ShinyAB 
 
+[![Build Status](https://travis-ci.org/okiyuki99/ShinyAB.svg?branch=master)](https://travis-ci.org/okiyuki99/ShinyAB)
+
 This application is a shiny app calculator of sample size for AB test which is a statistical approach to compare control and treatment groups. 
 
 This app built in shiny dashboard contains the following functions.
