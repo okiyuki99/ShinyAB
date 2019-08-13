@@ -2,3 +2,13 @@
 
 language: R
 cache: packages
+
+env:
+  global:
+    - RSCONNECT_NAME=${RSCONNECT_NAME}
+    - RSCONNECT_TOKEN=${RSCONNECT_TOKEN}
+    - RSCONNECT_SECRET=${RSCONNECT_SECRET}
+
+install:
+  - R -e 'if (system.file(package="renv") == "") remotes::install_github("rstudio/renv")'
+  - R -e "renv::restore(lockfile = 'renv.lock')"
