@@ -13,9 +13,18 @@ detach_all()
 rm(list = ls())
 
 
-library(pacman)
-pacman::p_load(dplyr, knitr, kableExtra, plotly, testthat)
-pacman::p_load(shiny, shinydashboard, tippy, dashboardthemes, shinycssloaders, shinytest)
+library(dplyr)
+library(knitr)
+library(plotly)
+library(testthat)
+library(kableExtra)
+
+library(shiny)
+library(shinydashboard)
+library(tippy)
+library(dashboardthemes)
+library(shinycssloaders)
+library(shinytest)
 
 source("utils/data.R")
 source("utils/logo.R")

@@ -1,5 +1,5 @@
-library(pacman)
-pacman::p_load(testthat, shinytest)
+library(testthat)
+library(shinytest)
 
 testthat::context("Shiny AB Test")
 
