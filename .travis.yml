@@ -18,7 +18,7 @@ cache:
   packages: true
   directories:
     # Packrat packages
-    - packrat/lib
+    - renv/library
     # PhantomJS
     - travis_phantomjs
 
@@ -37,3 +37,6 @@ before_install:
 
 script:
   - R -f run_tests.R
+  
+after_success:
+  - R -f deploy.R
