@@ -1,10 +1,10 @@
-library(shinytest)
-library(testthat)
+library(pacman)
+pacman::p_load(testthat, shinytest)
 
 testthat::context("Shiny AB Test")
 
 # open Shiny app and PhantomJS
-app <- shinytest::ShinyDriver$new("../")
+app <- shinytest::ShinyDriver$new("../",  loadTimeout = 100000)
 
 testthat::test_that("Click go", {
   

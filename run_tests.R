@@ -1,8 +1,8 @@
 # For recording
 # shinytest::recordTest("shinyapp/")
 
-library(testthat)
-library(shinytest)
+library(pacman)
+pacman::p_load(testthat, shinytest)
 dir.create("tests/test-current", showWarnings = F)
 
 testthat::test_that("Application works", {
