@@ -25,6 +25,9 @@ library(tippy)
 library(dashboardthemes)
 library(shinycssloaders)
 library(shinytest)
+if(!require(dashboardthemes)){
+  remotes::install_github("nik01010/dashboardthemes")
+}
 
 source("utils/data.R")
 source("utils/logo.R")
