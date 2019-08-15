@@ -90,18 +90,6 @@
       "Source": "CRAN",
       "Hash": "7dc1d02a04a75510424d2c7404fadfa7"
     },
-    "dashboardthemes": {
-      "Package": "dashboardthemes",
-      "Version": "1.0.5",
-      "Source": "GitHub",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "dashboardthemes",
-      "RemoteUsername": "nik01010",
-      "RemoteRef": "master",
-      "RemoteSha": "91524951f8ac635c46711b7693bd468751ffb995",
-      "Hash": "dd3904604304c483039eff4d749c4af5"
-    },
     "data.table": {
       "Package": "data.table",
       "Version": "1.12.2",

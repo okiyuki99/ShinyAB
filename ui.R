@@ -13,7 +13,7 @@ shinyUI(
       )
     ),
     dashboardBody(
-      shinyDashboardThemes(theme = "grey_light"),
+      theme_grey_light,
       tabItems(
         tabItem(tabName = "menu_top",
           fluidRow(

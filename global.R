@@ -12,7 +12,7 @@ detach_all <- function() {
 detach_all()
 rm(list = ls())
 
-
+# Loading ----
 library(dplyr)
 library(knitr)
 library(plotly)
@@ -24,9 +24,10 @@ library(shinydashboard)
 library(tippy)
 library(shinycssloaders)
 library(shinytest)
-library(dashboardthemes)
+library(htmltools)
 
 source("utils/data.R")
+source("utils/theme.R")
 source("utils/logo.R")
 source("utils/utils.R")
 
