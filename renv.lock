@@ -188,15 +188,9 @@
     },
     "httpuv": {
       "Package": "httpuv",
-      "Version": "1.5.1.9000",
-      "Source": "GitHub",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "httpuv",
-      "RemoteUsername": "rstudio",
-      "RemoteRef": "8492695",
-      "RemoteSha": "8492695919eaf0f1ccb7bfd8aadafa148c8f31a9",
-      "Hash": "14c03286d4bef276bc7d34ff5210fdb6"
+      "Version": "1.5.1",
+      "Source": "CRAN",
+      "Hash": "3e4206eb62d89401a2a990eba9b3ecac"
     },
     "httr": {
       "Package": "httr",
