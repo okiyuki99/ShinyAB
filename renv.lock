@@ -454,12 +454,6 @@
       "Source": "CRAN",
       "Hash": "0f9d491406a99401fdbfd8e8234cf1aa"
     },
-    "remotes": {
-      "Package": "remotes",
-      "Version": "2.1.0",
-      "Source": "CRAN",
-      "Hash": "830aa73278dce9beba583bfe57a5c015"
-    },
     "reshape2": {
       "Package": "reshape2",
       "Version": "1.4.3",

@@ -22,12 +22,9 @@ library(kableExtra)
 library(shiny)
 library(shinydashboard)
 library(tippy)
-library(dashboardthemes)
 library(shinycssloaders)
 library(shinytest)
-if(!require(dashboardthemes)){
-  remotes::install_github("nik01010/dashboardthemes")
-}
+library(dashboardthemes)
 
 source("utils/data.R")
 source("utils/logo.R")
