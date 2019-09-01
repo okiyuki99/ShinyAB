@@ -9,7 +9,7 @@ steps:
 - name: test
   image: okiyuki99/docker-shiny
   commands:
-    - R -f run_tests.R
+    - R --no-init-file -f run_tests.R
   when:
     event: push
 
