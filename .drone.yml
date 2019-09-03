@@ -23,7 +23,7 @@ steps:
     RSCONNECT_SECRET:
       from_secret: rsconnect_secret
   commands:
-    - R -f deploy.R
+    - R --no-init-file -f deploy.R
   when:
     branch: 
       - master
