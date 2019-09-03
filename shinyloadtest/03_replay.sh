@@ -1,0 +1,3 @@
+shinycannon shinyloadtest/recording.log http://127.0.0.1:6100 --workers 1 --loaded-duration-minutes 5 --output-dir shinyloadtest/run1
+shinycannon shinyloadtest/recording.log http://127.0.0.1:6100 --workers 5 --loaded-duration-minutes 5 --output-dir shinyloadtest/run5
+shinycannon shinyloadtest/recording.log http://127.0.0.1:6100 --workers 10 --loaded-duration-minutes 5 --output-dir shinyloadtest/run10

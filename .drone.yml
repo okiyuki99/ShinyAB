@@ -1,0 +1,32 @@
+kind: pipeline
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: test
+  image: okiyuki99/docker-shiny
+  commands:
+    - R --no-init-file -f run_tests.R
+  when:
+    event: push
+
+- name: deploy
+  image: r-base
+  environment:
+    RSCONNECT_NAME:
+      from_secret: rsconnect_name
+    RSCONNECT_TOKEN:
+      from_secret: rsconnect_token
+    RSCONNECT_SECRET:
+      from_secret: rsconnect_secret
+  commands:
+    - R -e 'install.packages("rsconnect")'
+    - R -f deploy.R
+  when:
+    branch: 
+      - master
+    status: [ success ]
+    event: push

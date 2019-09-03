@@ -1,19 +1,22 @@
 shinyUI(
-  dashboardPage(title = "ShinyAB Design",
-    dashboardHeader(title = logo_grey_light, titleWidth = 250),
+  dashboardPage(title = "ShinyAB",
+    dashboardHeader(title = logo_grey_light, titleWidth = 200),
     dashboardSidebar(
-      collapsed = TRUE, # sidebar hide
-      width = 150,
+      collapsed = T,
+      width = 200,
       sidebarMenu(
-        menuItem("AB Design", icon=icon("info"), tabName = "menu1")
+        menuItem("AB Design", icon = icon("th"), tabName = "menu_top"),
+        menuItem("Github", icon = icon("github"), href = "https://github.com/okiyuki99/ShinyAB"),
+        menuItem("RStudio Cloud", icon = icon("cloud"), href = "https://rstudio.cloud/project/245977"),
+        menuItem("shinyapps.io", icon = icon("external-link-square"), href = "https://okiyuki.shinyapps.io/ShinyAB"),
+        menuItem("About", icon = icon("question-circle-o"), tabName = "menu_about")
       )
     ),
     dashboardBody(
-      shinyDashboardThemes(theme = "grey_light"),
+      theme_grey_light,
       tabItems(
-        tabItem(
-          tabName = "menu1",
-            fluidRow(
+        tabItem(tabName = "menu_top",
+          fluidRow(
               box(title = "Parameter", width = 6, solidHeader = T, status = "primary", 
                   fluidRow(
                     column(3, 
@@ -36,13 +39,6 @@ shinyUI(
                   ),
                   uiOutput("ui_test_method_paramter"),
                   fluidRow(
-                    column(3,
-                           p(HTML("<b>(Optional) Case</b>"),span(shiny::icon("info-circle"), id = "info_optional_case"), textInput('optional_case', NULL, ""),
-                             tippy::tippy_this(elementId = "info_optional_case", tooltip = "You can annotate any label per experimental plan.", placement = "right")
-                           )
-                    )
-                  ),
-                  fluidRow(
                     column(12, actionButton("btn_go", "Add Record"))
                   )     
             ),
@@ -64,22 +60,25 @@ shinyUI(
               tableOutput("kable_proportion"),
               fluidRow(
                 column(1, actionButton("btn_remove", "Remove Record")),
-                column(11, uiOutput("ui_unvisible_columns"))
+                column(1, uiOutput("ui_dlbtn")),
+                column(10, uiOutput("ui_unvisible_columns"))
               )
             ),
             tabBox(
               title = "", width = 6,
-              # The id lets us use input$tabset1 on the server to find the current tab
               id = "tabset1",
-              tabPanel("Sample Size × Lift", plotlyOutput("simulation_plot")),
-              tabPanel("Running Lift", plotlyOutput("running_lift"))
+              tabPanel("Sample Size × Lift", plotlyOutput("simulation_plot") %>% withSpinner(type = 5)),
+              tabPanel("Running Lift", plotlyOutput("running_lift") %>% withSpinner(type = 5))
             ),
             tabBox(title = "", width = 6, 
               id = "tabset2",
-              tabPanel("Reject region and Power", plotlyOutput("rrp_plot")),
-              tabPanel("Probability Mass Function", plotlyOutput("pmf_plot"))
+              tabPanel("Reject region and Power", plotlyOutput("rrp_plot") %>% withSpinner(type = 5)),
+              tabPanel("Probability Mass Function", plotlyOutput("pmf_plot") %>% withSpinner(type = 5))
             )
           )
+        ),
+        tabItem(tabName = "menu_about",
+          includeMarkdown("docs/about.md")
         )
       )
     )

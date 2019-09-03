@@ -1,0 +1,35 @@
+# R for travis: see documentation at https://docs.travis-ci.com/user/languages/r
+language: R
+cache: packages
+
+install:
+  - R -e 'if (system.file(package="renv") == "") remotes::install_github("rstudio/renv")'
+  - R -e "renv::restore(lockfile = 'renv.lock')"
+  
+cache:
+  # Main R library
+  packages: true
+  directories:
+    # Packrat packages
+    - renv/library
+    # PhantomJS
+    - travis_phantomjs
+
+# Install PhantomJS (if not cached)
+before_install:
+  - "export PHANTOMJS_VERSION=2.1.1"
+  - "phantomjs --version"
+  - "export PATH=$PWD/travis_phantomjs/phantomjs-$PHANTOMJS_VERSION-linux-x86_64/bin:$PATH"
+  - "hash -r"
+  - "phantomjs --version"
+  - "if [ $(phantomjs --version) != $PHANTOMJS_VERSION ]; then rm -rf $PWD/travis_phantomjs; mkdir -p $PWD/travis_phantomjs; fi"
+  - "if [ $(phantomjs --version) != $PHANTOMJS_VERSION ]; then wget https://github.com/Medium/phantomjs/releases/download/v$PHANTOMJS_VERSION/phantomjs-$PHANTOMJS_VERSION-linux-x86_64.tar.bz2 -O $PWD/travis_phantomjs/phantomjs-$PHANTOMJS_VERSION-linux-x86_64.tar.bz2; fi"
+  - "if [ $(phantomjs --version) != $PHANTOMJS_VERSION ]; then tar -xvf $PWD/travis_phantomjs/phantomjs-$PHANTOMJS_VERSION-linux-x86_64.tar.bz2 -C $PWD/travis_phantomjs; fi"
+  - "if [ $(phantomjs --version) != $PHANTOMJS_VERSION ]; then hash -r; fi"
+  - "phantomjs --version"
+
+script:
+  - R -f run_tests.R
+  
+after_success:
+  - R -f deploy.R

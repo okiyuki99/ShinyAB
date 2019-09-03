@@ -2,3 +2,10 @@
 .Rhistory
 .RData
 .Ruserdata
+*.Rproj
+.DS_Store
+old/
+rsconnect/
+shinyloadtest/*.rds
+shinyloadtest/*.log
+shinyloadtest/run*
