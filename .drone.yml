@@ -14,7 +14,7 @@ steps:
     event: push
 
 - name: deploy
-  image: r-base
+  image: okiyuki99/docker-shiny
   environment:
     RSCONNECT_NAME:
       from_secret: rsconnect_name
@@ -23,7 +23,6 @@ steps:
     RSCONNECT_SECRET:
       from_secret: rsconnect_secret
   commands:
-    - R -e 'install.packages("rsconnect")'
     - R -f deploy.R
   when:
     branch: 
